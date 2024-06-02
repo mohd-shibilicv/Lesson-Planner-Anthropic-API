@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>AI Chat</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='styles.css') }}"
+    />
+    <script>
+      function enableSendButton() {
+        const message = document.getElementById("message").value.trim();
+        const sendButton = document.getElementById("sendButton");
+        sendButton.disabled = message === "";
+      }
+
+      async function sendMessage() {
+        const message = document.getElementById("message").value;
+        if (!message.trim()) {
+          return; // Exit function if the message is empty or contains only whitespace
+        }
+        const responseElem = document.getElementById("response");
+        const messageInput = document.getElementById("message");
+
+        responseElem.innerText = "Generating...";
+
+        const cursor = document.createElement("span");
+        cursor.classList.add("cursor");
+        responseElem.appendChild(cursor); // Add cursor to the response element
+
+        const response = await fetch("/chat", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ message: message }),
+        });
+        const data = await response.json();
+        responseElem.innerText = "";
+        if (data.response) {
+          typeText(responseElem, data.response, cursor);
+        } else {
+          responseElem.innerText = data.error;
+          cursor.remove(); // Remove cursor if there's an error
+        }
+      }
+
+      function typeText(element, text, cursor) {
+        let index = 0;
+        const messageInput = document.getElementById("message");
+        const sendButton = document.getElementById("sendButton");
+        messageInput.disabled = true;
+        sendButton.disabled = true;
+        function type() {
+          if (index < text.length) {
+            element.innerText = text.slice(0, index + 1);
+            element.appendChild(cursor); // Ensure cursor remains at the end
+            index++;
+            scrollToBottom(element);
+            setTimeout(type, 10); // Adjust the typing speed here
+          } else {
+            cursor.remove(); // Remove cursor after typing is complete
+            scrollToBottom(element);
+            messageInput.disabled = false; // Disable the send button
+            sendButton.disabled = false; // Disable the send button
+          }
+        }
+        type();
+      }
+
+      function scrollToBottom(element) {
+        element.scrollTop = element.scrollHeight;
+      }
+    </script>
+  </head>
+  <body>
+    <div class="title">
+      <h1>Lesson planner</h1>
+      <p>Craft in depth lesson plans on any subject.</p>
+    </div>
+    <div class="message-area">
+      <input
+        type="text"
+        id="message"
+        placeholder="Plan your lesson"
+        oninput="enableSendButton()"
+      />
+      <button onclick="sendMessage()" id="sendButton" disabled>Send</button>
+    </div>
+    <div class="response-message">
+      <pre id="response"></pre>
+    </div>
+  </body>
+</html>
